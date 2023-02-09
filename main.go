@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html/charset"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/unicode"
@@ -25,13 +27,15 @@ func main() {
 	if err != nil {
 		fmt.Println("fetch url err:", err)
 	}
-	r := TextReg(`<a target="_blank" href="/new.*?class="index_inherit__A1ImK"><div class="small_imgposition_.*?<h2>([\s\S]*?)</h2></a>`, body)
-	for _, value := range r {
-		if string(value) != "" {
-			fmt.Println(string(value))
-		}
 
+	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
+	if err != nil {
+		fmt.Println("read content err:", err)
 	}
+	doc.Find("div.index-leftside ").Each(func(i int, selection *goquery.Selection) {
+		title := selection.Text()
+		fmt.Println(title)
+	})
 }
 
 func Fetch(url string) ([]byte, error) {
