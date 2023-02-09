@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"golang.org/x/net/html/charset"
+	"golang.org/x/text/encoding"
+	"golang.org/x/text/encoding/unicode"
+	"golang.org/x/text/transform"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
+	"regexp"
 )
 
 /*
@@ -15,6 +20,22 @@ import (
 
 func main() {
 	url := "https://www.thepaper.cn/"
+
+	body, err := Fetch(url)
+	if err != nil {
+		fmt.Println("fetch url err:", err)
+	}
+	r := TextReg(`<a target="_blank" href="/new.*?class="index_inherit__A1ImK"><div class="small_imgposition_.*?<h2>([\s\S]*?)</h2></a>`, body)
+	for _, value := range r {
+		if string(value) != "" {
+			fmt.Println(string(value))
+		}
+
+	}
+}
+
+func Fetch(url string) ([]byte, error) {
+
 	resp, err := http.Get(url)
 	if err != nil {
 		log.Fatalf("get url err:%v", err)
@@ -28,20 +49,29 @@ func main() {
 		fmt.Println("返回的状态码不为200")
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	bodyReader := bufio.NewReader(resp.Body)
+	e := DeterminEncoding(bodyReader)
+	utf8Reader := transform.NewReader(bodyReader, e.NewEncoder())
+	return ioutil.ReadAll(utf8Reader)
+}
+
+func DeterminEncoding(r *bufio.Reader) encoding.Encoding {
+	bytes, err := r.Peek(1024)
 	if err != nil {
-		log.Fatalf("read body err:%v", err)
-		fmt.Println("读取返回内容失败")
+		fmt.Println("fetch err: %v", err)
+		return unicode.UTF8
 	}
 
-	// fmt.Println("返回结果：")
-	// fmt.Println("%s", string(body))
+	e, _, _ := charset.DetermineEncoding(bytes, "")
+	return e
+}
 
-	numLinks := strings.Count(string(body), "<a")
-	fmt.Printf("this html has %d links!\n", numLinks)
-
-	exist := strings.Contains(string(body), "抖音")
-
-	fmt.Printf("抖音 exist ？%v", exist)
-
+func TextReg(regP string, body []byte) [][]byte {
+	res := make([][]byte, 1)
+	headerRe := regexp.MustCompile(regP)
+	matches := headerRe.FindAllSubmatch(body, -1)
+	for _, m := range matches {
+		res = append(res, m[1])
+	}
+	return res
 }
