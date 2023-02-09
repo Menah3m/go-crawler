@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/menah3m/go-crawler/collect"
+	"time"
 )
 
 /*
@@ -27,7 +28,7 @@ func main() {
 	// 	fmt.Println(title)
 	// })
 	url := "https://book.douban.com/subject/1007305/"
-	b := collect.BrowserFetch{}
+	b := collect.BrowserFetch{Timeout: 5 * time.Second}
 	body, err := b.Get(url)
 	if err != nil {
 		fmt.Println("read content failed:", err)
